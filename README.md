@@ -1,25 +1,25 @@
 # FineWeb-Edu LLM Training
 
-A complete pipeline for fine-tuning **GPT-2 Large (774M params)** on the FineWeb-Edu dataset, with a **RAG-enhanced chatbot** that retrieves relevant educational content in real-time.
+A complete pipeline for fine-tuning **Llama-2-13B** on the FineWeb-Edu dataset using **QLoRA**, with a **RAG-enhanced chatbot** that retrieves relevant educational content in real-time.
 
 ## 🚀 Project Overview
 
 This repository contains a Jupyter-based fine-tuning pipeline and a chatbot with Retrieval-Augmented Generation (RAG). The model is fine-tuned on high-quality educational web content and can search through its knowledge base to provide grounded answers.
 
 ### Key Features:
-- **QLoRA Fine-Tuning**: Efficiently fine-tune GPT-2 Large using 4-bit quantization + LoRA adapters.
-- **Extreme VRAM Efficiency**: Fits a 774M model in ~5GB total VRAM (T4 optimized).
+- **QLoRA Fine-Tuning**: 4-bit NF4 quantization + LoRA (r=32) on Llama-2-13B.
+- **H100 Optimized**: Flash Attention 2, BFloat16, batch size 32, cosine LR scheduler.
 - **Layered RAG Chat**: Combines local FAISS vector search with live HuggingFace streaming search.
 
 ## 🛠 Technical Specifications
 
-### Model Architecture (GPT-2 Large)
-- **Parameters**: ~774 Million
-- **Vocabulary Size**: 50,257
-- **Layers**: 36
-- **Attention Heads**: 20
-- **Embedding Dimension**: 1280
-- **Context Length**: 1,024 tokens
+### Model Architecture (Llama-2-13B)
+- **Parameters**: ~13 Billion
+- **Vocabulary Size**: 32,000
+- **Layers**: 40
+- **Attention Heads**: 40
+- **Embedding Dimension**: 5,120
+- **Context Length**: 2,048 tokens
 
 ### Dataset: FineWeb-Edu
 The model is fine-tuned on **1,000,000 samples** from [HuggingFaceFW/fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu).
@@ -31,12 +31,16 @@ The model is fine-tuned on **1,000,000 samples** from [HuggingFaceFW/fineweb-edu
 - **Retrieval**: Top-3 most relevant passages per query.
 
 ## 📈 Training Configuration
-- **Base Model**: `gpt2-large`
-- **Learning Rate**: 2e-5 (with 500-step warmup)
-- **Effective Batch Size**: 8 (1 per device × 8 gradient accumulation)
-- **Precision**: FP16 mixed precision
-- **Optimizer**: Adafactor
-- **Gradient Checkpointing**: Enabled (Essential for 15GB VRAM)
+- **Base Model**: `meta-llama/Llama-2-13b-hf`
+- **Quantization**: 4-bit NF4 + Double Quantization
+- **LoRA**: r=32, alpha=64, targets: `q_proj`, `k_proj`, `v_proj`, `o_proj`
+- **Learning Rate**: 8e-5 (cosine schedule, 3% warmup)
+- **Batch Size**: 32
+- **Precision**: BFloat16
+- **Optimizer**: Paged AdamW 32-bit
+- **Attention**: Flash Attention 2
+- **Max Steps**: 5,000
+- **Hardware**: NVIDIA H100 (80GB)
 
 ## 📂 Project Structure
 
@@ -49,16 +53,16 @@ The model is fine-tuned on **1,000,000 samples** from [HuggingFaceFW/fineweb-edu
 
 ### 1. Cloud Training (Recommended)
 1. Upload `train.ipynb` to **Google Colab**.
-2. Set Runtime to **T4 GPU**.
+2. Set Runtime to **H100 GPU**.
 3. Run the setup cells to mount Google Drive and install dependencies.
-4. Run all cells to fine-tune and build the RAG index. Matches are saved to your Drive.
+4. Run all cells to fine-tune and build the RAG index. Artifacts are saved to your Drive.
 
 ### 2. Local Chat
 Once trained:
-1. Download the `fineweb_edu_gpt2_large` folder from Drive to your local `out/` directory.
+1. Download the `fineweb_edu_llama2_13b` folder from Drive to your local `out/` directory.
 2. Install local deps:
    ```bash
-   pip install torch transformers datasets faiss-cpu sentence-transformers
+   pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate
    ```
 3. Run the chat:
    ```bash
