@@ -22,7 +22,7 @@ This repository contains a Jupyter-based fine-tuning pipeline and a chatbot with
 - **Context Length**: 1,024 tokens
 
 ### Dataset: FineWeb-Edu
-The model is fine-tuned on **700,000 samples** from [HuggingFaceFW/fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu). (Reduced from 1M to optimize for Colab System RAM).
+The model is fine-tuned on **1,000,000 samples** from [HuggingFaceFW/fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu).
 
 ### RAG Pipeline (Layered Retrieval)
 - **Layer 1 — Local FAISS Index**: Pre-built vector store with ~100K passages (instant, offline).
