@@ -29,7 +29,6 @@ import multiprocessing
 import wordsegment
 import torch
 import numpy as np
-import time
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer, 
@@ -53,6 +52,16 @@ LIVE_SEARCH_ENABLED = True       # set False to disable internet search
 LIVE_SEARCH_SAMPLES = 5_000     # how many dataset rows to scan per query
 LIVE_SEARCH_MAX_MATCHES = 50    # max keyword matches to collect
 LIVE_SEARCH_MIN_SCORE = 0.3     # minimum similarity to include a passage
+
+# Safe defaults in case functions are called before __main__ initializes
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = None
+tokenizer = None
+embedder = None
+faiss_index = None
+local_passages = None
+local_rag_available = False
+live_search_available = False
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
@@ -200,7 +209,9 @@ def extract_keywords(query: str) -> list[str]:
         "few", "more", "most", "other", "some", "such", "no", "nor", "not",
         "only", "own", "same", "so", "than", "too", "very", "just", "don",
         "now", "also", "me", "my", "tell", "explain", "describe", "define",
-        "please", "i", "you", "we", "they", "he", "she"
+        "please", "i", "you", "we", "they", "he", "she",
+        "hi", "hey", "hello", "thanks", "thank", "ok", "okay", "yes", "no",
+        "sure", "great", "good", "bye", "goodbye"
     }
 
     words = re.findall(r'\b[a-zA-Z]{2,}\b', query.lower())
@@ -307,6 +318,11 @@ def search_huggingface_live(query: str, top_k: int = TOP_K) -> list[tuple[str, f
 
 def retrieve_context(query: str) -> tuple[str, str]:
     """Retrieve relevant passages using layered search."""
+    # Skip RAG for very short or greeting-style queries
+    words = query.strip().split()
+    if len(words) <= 2:
+        return "", "none"
+
     local_results = search_local_index(query, TOP_K)
     best_local_score = max((s for _, s in local_results), default=0)
 
@@ -348,9 +364,14 @@ def tokens_to_spaced_text(token_ids, tokenizer, start_idx):
         clean_up_tokenization_spaces=False
     )
     
-    # Find runs of 9+ letters and segment them — leaves punctuation/numbers alone
     def segment_run(match):
         run = match.group(0)
+        # Don't segment all-caps acronyms like PIEZO, CRISPR, CAR
+        if run.isupper():
+            return run
+        # Don't segment if it's already a known word (avoid breaking "scientific")
+        if run.lower() in wordsegment.WORDS:
+            return run
         return ' '.join(wordsegment.segment(run))
     
     result = re.sub(r'[a-zA-Z]{9,}', segment_run, raw)
@@ -380,19 +401,42 @@ def generate_response(prompt: str) -> str:
         max_length=2048 - MAX_NEW_TOKENS
     ).to(device)
 
-    # Generate
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=MAX_NEW_TOKENS,
-            temperature=TEMPERATURE,
-            top_p=TOP_P,
-            repetition_penalty=REPETITION_PENALTY,
-            do_sample=True,
-            eos_token_id=tokenizer.eos_token_id,
-            pad_token_id=tokenizer.pad_token_id
-        )
+    # Generate with OOM fallback
+    try:
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids=inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=MAX_NEW_TOKENS,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                repetition_penalty=REPETITION_PENALTY,
+                do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.pad_token_id
+            )
+    except torch.cuda.OutOfMemoryError:
+        print("  [VRAM full, retrying with shorter output...]")
+        torch.cuda.empty_cache()
+        # Shorten both input and output for retry
+        inputs = tokenizer(
+            full_prompt,
+            return_tensors="pt",
+            truncation=True,
+            max_length=1024
+        ).to(device)
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids=inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=256,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                repetition_penalty=REPETITION_PENALTY,
+                do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.pad_token_id
+            )
 
     # Decode using the advanced space reconstruction workaround
     input_length = inputs.input_ids.shape[1]
@@ -401,7 +445,7 @@ def generate_response(prompt: str) -> str:
 
 
 if __name__ == "__main__":
-    # --- Chat Loop ---
+    # Chat Loop
     print("\n" + "=" * 60)
     print("  Llama-2-13B Educational Chatbot")
     features = []
