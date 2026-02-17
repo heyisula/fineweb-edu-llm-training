@@ -2,11 +2,12 @@
 
 # 🧠 FineWeb-Edu LLM Training
 
-**Production-grade QLoRA fine-tuning of Llama-2-13B on educational web content — with a RAG-powered chatbot built in.**
+**QLoRA fine-tuning of Llama-2-13B on educational web content, with a RAG-powered chatbot.**
 
 [![Model](https://img.shields.io/badge/Model-Llama--2--13B-blueviolet)](https://huggingface.co/NousResearch/Llama-2-13b-hf)
 [![Dataset](https://img.shields.io/badge/Dataset-FineWeb--Edu-blue)](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
-[![GPU](https://img.shields.io/badge/GPU-H100%2080GB-green)](https://www.nvidia.com/en-us/data-center/h100/)
+[![Train GPU](https://img.shields.io/badge/Training-H100%2080GB-green)](https://www.nvidia.com/en-us/data-center/h100/)
+[![Inference GPU](https://img.shields.io/badge/Inference-RTX%204060%208GB-orange)](https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4060-family/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -15,11 +16,11 @@
 
 ## 👋 What is this?
 
-This project takes **Meta's Llama-2 13B** model and fine-tunes it on **1 million high-quality educational passages** from the FineWeb-Edu dataset. The result is a language model that's better at explaining concepts, answering questions, and holding educational conversations.
+This project fine-tunes **Meta's Llama-2 13B** on **1 million educational passages** from the FineWeb-Edu dataset. The goal is a model that's better at explaining things and answering questions.
 
-On top of that, there's a **RAG chatbot** (`chat_llm.py`) that doesn't just rely on what the model "remembers" — it actively searches a local knowledge base to back up its answers with real passages.
+Training happens on an H100 in the cloud, but the resulting model runs locally on consumer GPUs with as little as 8GB VRAM using 4-bit quantization.
 
-Think of it as a smarter tutor that can both reason *and* look things up.
+There's also a **RAG chatbot** (`chat_llm.py`) that doesn't just rely on what the model memorized during training. It searches a local FAISS knowledge base first, and if results aren't good enough, it falls back to a live search on HuggingFace.
 
 ---
 
@@ -28,9 +29,10 @@ Think of it as a smarter tutor that can both reason *and* look things up.
 | Feature | Details |
 | :--- | :--- |
 | 🦙 **Llama-2-13B** | 13 billion parameter base model from Meta |
-| ⚡ **QLoRA** | 4-bit NF4 quantization — trains a 13B model on a single GPU |
+| ⚡ **QLoRA** | 4-bit NF4 quantization, trains a 13B model on a single GPU |
 | 🚀 **H100 Optimized** | Flash Attention 2, BF16, TF32, Batch 2 / Accum 4 |
-| 🛡️ **Grad Checkpointing** | CRITICAL: Reduces activation VRAM from 40GB to ~4GB |
+| 🖥️ **Runs on 8GB GPUs** | Local inference with SDPA attention and precise VRAM mapping |
+| 🛡️ **Grad Checkpointing** | Reduces activation VRAM from 40GB to around 4GB |
 | 📊 **Live Diagnostics** | Real-time it/s, tok/s, and ETA monitoring during training |
 | 📚 **1M Samples** | Streamed from FineWeb-Edu (never loads full dataset into RAM) |
 | 🔍 **RAG Chat** | FAISS vector search + live HuggingFace fallback |
@@ -75,20 +77,34 @@ FineWeb-Edu (1M samples)
   <tr><td><b>Optimizer</b></td><td>AdamW 8-bit (bitsandbytes)</td></tr>
   <tr><td><b>LR Schedule</b></td><td>Cosine (1e-4, 150 warmup steps)</td></tr>
   <tr><td><b>Precision</b></td><td>BFloat16 + TF32</td></tr>
-  <tr><td><b>Attention</b></td><td>Flash Attention 2</td></tr>
+  <tr><td><b>Attention</b></td><td>Flash Attention 2 (training) / SDPA (local inference)</td></tr>
   <tr><td><b>Grad Checkpointing</b></td><td>Enabled (Required for 13B on 80GB)</td></tr>
   <tr><td><b>Dataloader</b></td><td>4 workers, persistent, pinned, drop_last</td></tr>
   <tr><td><b>Max Steps</b></td><td>5,000</td></tr>
   <tr><td><b>Hardware</b></td><td>NVIDIA H100 80GB HBM3</td></tr>
 </table>
 
-**Expected throughput**: ~1.1–1.3 it/s on H100 with checkpointing enabled.
+**Expected throughput**: ~1.1-1.3 it/s on H100 with checkpointing enabled.
+
+---
+
+## 🖥️ Local Inference
+
+The chatbot is designed to run on consumer GPUs. Here's what makes that possible:
+
+- **4-bit quantization** keeps the 13B model under 8GB VRAM
+- **SDPA attention** is used instead of Flash Attention 2 (which is hard to install on Windows)
+- **Precise memory mapping** (`7500MiB` GPU limit) leaves headroom for generation activations
+- **Word segmentation** (`wordsegment` library) post-processes the output to fix spacing artifacts from fine-tuning
+- **Windows-safe** multiprocessing guards prevent duplicate loading from spawned workers
+
+Tested on an RTX 4060 (8GB) with 32GB system RAM.
 
 ---
 
 ## 🔐 Authentication
 
-This project uses the **NousResearch/Llama-2-13b-hf** community mirror, which is **fully open and ungated** — no HuggingFace token or license acceptance is required. Just run the notebook and it downloads automatically.
+This project uses the **NousResearch/Llama-2-13b-hf** community mirror, which is fully open and ungated. No HuggingFace token or license acceptance needed. Just run the notebook and it downloads automatically.
 
 ---
 
@@ -122,7 +138,7 @@ fineweb-edu-llm-training/
 
 1. Upload `train.ipynb` to [Google Colab](https://colab.research.google.com)
 2. Set the runtime to **H100 GPU**
-3. Run all cells — hardware diagnostics will confirm your setup
+3. Run all cells. Hardware diagnostics will confirm your setup
 4. Model and RAG index are saved to your Google Drive automatically
 
 ### Local Chat
@@ -137,7 +153,7 @@ pip install torch transformers datasets faiss-cpu sentence-transformers peft bit
 python chat_llm.py
 ```
 
-The chatbot uses a **layered search** strategy: it first checks the local FAISS index, then falls back to **live HuggingFace dataset search** if local results aren't confident enough.
+The chatbot checks the local FAISS index first, and if results aren't good enough it falls back to a live search on HuggingFace.
 
 ### Rebuilding the RAG Index
 
@@ -162,5 +178,5 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <div align="center">
-  <sub>Built with ❤️ using HuggingFace Transformers, PEFT, and local H100 compute.</sub>
+  <sub>Built with ❤️ using HuggingFace Transformers, PEFT, and bitsandbytes.</sub>
 </div>
