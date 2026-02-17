@@ -68,12 +68,14 @@ FineWeb-Edu (1M samples)
   <tr><td><b>LoRA Rank</b></td><td>r=32, alpha=64</td></tr>
   <tr><td><b>LoRA Targets</b></td><td><code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, <code>o_proj</code></td></tr>
   <tr><td><b>Sequence Length</b></td><td>2,048 tokens</td></tr>
-  <tr><td><b>Batch Size</b></td><td>32</td></tr>
+  <tr><td><b>Batch Size</b></td><td>16 (no gradient accumulation)</td></tr>
   <tr><td><b>Optimizer</b></td><td>Paged AdamW 32-bit</td></tr>
-  <tr><td><b>LR Schedule</b></td><td>Cosine (8e-5, 3% warmup)</td></tr>
+  <tr><td><b>LR Schedule</b></td><td>Cosine (1e-4, 3% warmup)</td></tr>
   <tr><td><b>Precision</b></td><td>BFloat16</td></tr>
   <tr><td><b>Attention</b></td><td>Flash Attention 2</td></tr>
-  <tr><td><b>Max Steps</b></td><td>5,000</td></tr>
+  <tr><td><b>Grad Checkpointing</b></td><td>Disabled (H100 has headroom)</td></tr>
+  <tr><td><b>Dataloader Workers</b></td><td>8 + pin_memory</td></tr>
+  <tr><td><b>Max Steps</b></td><td>5,000 (~45–60 min on H100)</td></tr>
   <tr><td><b>Hardware</b></td><td>NVIDIA H100 (80GB)</td></tr>
 </table>
 
