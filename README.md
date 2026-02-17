@@ -96,13 +96,22 @@ This project uses the **NousResearch/Llama-2-13b-hf** community mirror, which is
 
 ```
 fineweb-edu-llm-training/
-├── train.ipynb          # Fine-tuning notebook (H100-optimized)
-├── chat_llm.py          # Llama-2-13B RAG chatbot
-├── build_rag_index.py   # FAISS index builder
-├── README.md            # Documentation
+├── train.ipynb              # Fine-tuning notebook (H100-optimized)
+├── chat_llm.py              # Llama-2-13B RAG chatbot
+├── build_rag_index.py       # Standalone FAISS index builder
+├── README.md                # Documentation
+├── LICENSE                  # MIT License
+├── .gitignore               # Git ignore rules
 └── out/
-    ├── final_model/     # LoRA adapters (adapter_config.json, etc.)
-    └── rag_index/       # FAISS index (faiss_index.bin, passages.npy)
+    ├── final_model/         # LoRA adapters
+    │   ├── adapter_config.json
+    │   ├── adapter_model.safetensors
+    │   ├── tokenizer.json
+    │   ├── tokenizer_config.json
+    │   └── training_args.bin
+    └── rag_index/           # FAISS vector index
+        ├── faiss_index.bin
+        └── passages.npy
 ```
 
 ---
@@ -122,11 +131,23 @@ Once you've trained the model and downloaded the files into the `out/` folder:
 
 ```bash
 # 1. Install dependencies
-pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate
+pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate wordsegment tqdm
 
 # 2. Start chatting
 python chat_llm.py
 ```
+
+The chatbot uses a **layered search** strategy: it first checks the local FAISS index, then falls back to **live HuggingFace dataset search** if local results aren't confident enough.
+
+### Rebuilding the RAG Index
+
+If you want to rebuild or update the local knowledge base separately:
+
+```bash
+python build_rag_index.py
+```
+
+This streams 100K samples from FineWeb-Edu, chunks them into passages, embeds them, and writes the FAISS index to `out/rag_index/`.
 
 ---
 

@@ -117,7 +117,7 @@ if __name__ == "__main__":
     # Load base model
     # GPU-only loading with precise headroom
     max_memory = {
-        0: "7500MiB",   # ~7.3 GB, leaves ~500 MB headroom for activations
+        0: "7500MiB",   # 7.3 GB, leaves 500 MB headroom for activations
     }
 
     base_model = AutoModelForCausalLM.from_pretrained(

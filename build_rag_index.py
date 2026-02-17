@@ -22,7 +22,7 @@ except ImportError:
     print("ERROR: faiss not installed. Run: pip install faiss-cpu")
     exit(1)
 
-# --- Configuration ---
+#Configuration
 NUM_SAMPLES = 100_000       # Number of dataset rows to use
 MAX_PASSAGE_LEN = 500       # Characters per chunk
 MIN_PASSAGE_LEN = 50        # Skip chunks shorter than this
@@ -34,7 +34,7 @@ RAG_DIR = "out/rag_index"
 def main():
     os.makedirs(RAG_DIR, exist_ok=True)
 
-    # 1. Load dataset
+    #Load dataset
     print(f"Loading {NUM_SAMPLES:,} samples from FineWeb-Edu...")
     dataset = load_dataset(
         "HuggingFaceFW/fineweb-edu",
@@ -45,7 +45,7 @@ def main():
     subset = dataset.take(NUM_SAMPLES)
     data_list = [row for row in tqdm(subset, total=NUM_SAMPLES, desc="Downloading")]
 
-    # 2. Chunk into passages
+    #Chunk into passages
     print("Chunking into passages...")
     passages = []
     for row in tqdm(data_list, desc="Chunking"):
@@ -57,7 +57,7 @@ def main():
 
     print(f"Total passages: {len(passages):,}")
 
-    # 3. Embed
+    #Embed
     print(f"Loading embedding model: {EMBED_MODEL}")
     embedder = SentenceTransformer(EMBED_MODEL)
 
@@ -69,14 +69,14 @@ def main():
         convert_to_numpy=True
     )
 
-    # 4. Build FAISS index
+    #Build FAISS index
     print("Building FAISS index...")
     dimension = embeddings.shape[1]
     index = faiss.IndexFlatIP(dimension)
     faiss.normalize_L2(embeddings)
     index.add(embeddings)
 
-    # 5. Save
+    #Save
     faiss.write_index(index, os.path.join(RAG_DIR, "faiss_index.bin"))
     np.save(os.path.join(RAG_DIR, "passages.npy"), np.array(passages, dtype=object))
 

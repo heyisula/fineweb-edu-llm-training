@@ -1,4 +1,4 @@
-# Model outputs and checkpoints
+# Model outputs,checkpoints, rag indexes
 out/
 __pycache__/
 
