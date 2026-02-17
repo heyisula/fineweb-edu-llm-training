@@ -4,7 +4,7 @@
 
 **Fine-tuning Llama-2-13B on educational web content — with a RAG-powered chatbot built in.**
 
-[![Model](https://img.shields.io/badge/Model-Llama--2--13B-blueviolet)](https://huggingface.co/meta-llama/Llama-2-13b-hf)
+[![Model](https://img.shields.io/badge/Model-Llama--2--13B-blueviolet)](https://huggingface.co/NousResearch/Llama-2-13b-hf)
 [![Dataset](https://img.shields.io/badge/Dataset-FineWeb--Edu-blue)](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
 [![GPU](https://img.shields.io/badge/GPU-H100%2080GB-green)](https://www.nvidia.com/en-us/data-center/h100/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -63,7 +63,7 @@ FineWeb-Edu (1M samples)
 ## 📊 Training Configuration
 
 <table>
-  <tr><td><b>Base Model</b></td><td><code>meta-llama/Llama-2-13b-hf</code></td></tr>
+  <tr><td><b>Base Model</b></td><td><code>NousResearch/Llama-2-13b-hf</code></td></tr>
   <tr><td><b>Quantization</b></td><td>4-bit NF4 + Double Quantization</td></tr>
   <tr><td><b>LoRA Rank</b></td><td>r=32, alpha=64</td></tr>
   <tr><td><b>LoRA Targets</b></td><td><code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, <code>o_proj</code></td></tr>
@@ -79,33 +79,15 @@ FineWeb-Edu (1M samples)
 
 ---
 
-## 🔐 Authentication (Important!)
+## 🔐 Authentication
 
-Llama-2 is a **gated model** — Meta requires you to accept their license before you can download it. This takes about 2 minutes:
+This project uses the **NousResearch/Llama-2-13b-hf** community mirror, which is **fully open and ungated** — no HuggingFace token or license acceptance is required. Just run the notebook and it downloads automatically.
 
-### Step 1: Accept the license
-1. Go to the [Llama-2-13B model page](https://huggingface.co/meta-llama/Llama-2-13b-hf)
-2. Log in to your HuggingFace account
-3. Click **"Agree and access repository"**
-4. Approval is usually instant
+> 💡 **Want to use the official Meta model instead?** Change `MODEL_NAME` in the notebook to `meta-llama/Llama-2-13b-hf`. You'll need to:
+> 1. Accept the license at [meta-llama/Llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf)
+> 2. Create a [HuggingFace token](https://huggingface.co/settings/tokens) with Read access
+> 3. Add it as `HF_TOKEN` in your Colab secrets (🔑 icon in the sidebar)
 
-### Step 2: Create an access token
-1. Go to your [HuggingFace token settings](https://huggingface.co/settings/tokens)
-2. Click **"New token"** → give it a name → set access to **Read**
-3. Copy the token
-
-### Step 3: Add the token to Colab
-1. Open your notebook in Google Colab
-2. Click the **🔑 key icon** in the left sidebar (Secrets panel)
-3. Add a new secret:
-   - **Name**: `HF_TOKEN`
-   - **Value**: *paste your token here*
-   - **Notebook access**: toggle **ON** ✅
-4. Restart the runtime (`Ctrl+M .`)
-
-That's it. The notebook will automatically pick up the token and authenticate with HuggingFace.
-
-> 💡 **Tip**: If you'd rather skip this, you can swap the model to `NousResearch/Llama-2-13b-hf` — it's an ungated community mirror of the same weights.
 
 ---
 
