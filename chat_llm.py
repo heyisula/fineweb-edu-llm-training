@@ -1,5 +1,5 @@
 """
-GPT-2 Medium Chatbot with RAG + Live HuggingFace Search
+Llama-2-13B QLoRA Chatbot with RAG + Live HuggingFace Search
 
 Retrieval strategy (layered):
   1. Search LOCAL FAISS index (instant, offline)
@@ -16,14 +16,21 @@ import os
 import re
 import torch
 import numpy as np
-from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+import time
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer, 
+    BitsAndBytesConfig
+)
+from peft import PeftModel
 
-# --- Configuration ---
-MODEL_DIR = "out/models/gpt2_medium_finetuned"
+# Configuration
+BASE_MODEL_ID = "NousResearch/Llama-2-13b-hf"
+ADAPTER_DIR = "out/final_model"
 RAG_DIR = "out/rag_index"
 
 TOP_K = 3                # passages to use as context
-MAX_NEW_TOKENS = 200
+MAX_NEW_TOKENS = 256
 TEMPERATURE = 0.7
 TOP_P = 0.9
 
@@ -33,20 +40,39 @@ LIVE_SEARCH_SAMPLES = 5_000     # how many dataset rows to scan per query
 LIVE_SEARCH_MAX_MATCHES = 50    # max keyword matches to collect
 LIVE_SEARCH_MIN_SCORE = 0.3     # minimum similarity to include a passage
 
-# --- Device Setup ---
+# Device Setup
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-# --- Load Model & Tokenizer ---
-print(f"Loading model from: {MODEL_DIR}")
-tokenizer = GPT2TokenizerFast.from_pretrained(MODEL_DIR)
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
+# Load Model & Tokenizer
+print(f"Loading base model: {BASE_MODEL_ID}")
 
-model = GPT2LMHeadModel.from_pretrained(MODEL_DIR).to(device)
+# Configure 4-bit quantization for local VRAM efficiency
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
+tokenizer.pad_token = tokenizer.eos_token
+
+# Load base model
+base_model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL_ID,
+    quantization_config=bnb_config,
+    device_map="auto",
+    torch_dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2" if torch.cuda.is_available() else "eager"
+)
+
+# Load LoRA adapters
+print(f"Applying LoRA adapters from: {ADAPTER_DIR}")
+model = PeftModel.from_pretrained(base_model, ADAPTER_DIR)
 model.eval()
 
-# --- Load Embedding Model ---
+#Load Embedding Model
 embedder = None
 try:
     from sentence_transformers import SentenceTransformer
@@ -56,7 +82,7 @@ except ImportError:
     print("sentence-transformers not installed. RAG features disabled.")
     print("Install with: pip install sentence-transformers")
 
-# --- Load Local FAISS Index (if available) ---
+# Load Local FAISS Index (if available)
 local_rag_available = False
 faiss_index = None
 local_passages = None
@@ -81,7 +107,7 @@ if embedder:
     except Exception as e:
         print(f"Failed to load local RAG index: {e}")
 
-# --- Check Live Search Availability ---
+# Check Live Search Availability
 live_search_available = False
 if LIVE_SEARCH_ENABLED and embedder:
     try:
@@ -98,7 +124,6 @@ else:
 
 def extract_keywords(query: str) -> list[str]:
     """Extract meaningful keywords from a query for filtering."""
-    # Remove common stop words
     stop_words = {
         "what", "is", "a", "an", "the", "how", "does", "do", "can", "could",
         "would", "should", "will", "are", "was", "were", "been", "being",
@@ -117,7 +142,6 @@ def extract_keywords(query: str) -> list[str]:
     words = re.findall(r'\b[a-zA-Z]{2,}\b', query.lower())
     keywords = [w for w in words if w not in stop_words]
 
-    # If all words were stop words, use the longest words from the query
     if not keywords:
         words_sorted = sorted(words, key=len, reverse=True)
         keywords = words_sorted[:3]
@@ -158,13 +182,13 @@ def search_huggingface_live(query: str, top_k: int = TOP_K) -> list[tuple[str, f
     print(f"  [Live search: scanning FineWeb-Edu for '{' '.join(keywords)}'...]")
 
     try:
+        from datasets import load_dataset
         dataset = load_dataset(
             "HuggingFaceFW/fineweb-edu",
             split="train",
             streaming=True
         )
 
-        # Stream through samples and collect keyword matches
         matched_passages = []
         scanned = 0
 
@@ -177,10 +201,8 @@ def search_huggingface_live(query: str, top_k: int = TOP_K) -> list[tuple[str, f
             if not text:
                 continue
 
-            # Check if any keyword appears in the text (case-insensitive)
             text_lower = text.lower()
             if any(kw in text_lower for kw in keywords):
-                # Chunk the text and keep relevant chunks
                 for i in range(0, min(len(text), 2000), 500):
                     chunk = text[i:i + 500].strip()
                     if len(chunk) > 50 and any(kw in chunk.lower() for kw in keywords):
@@ -198,16 +220,13 @@ def search_huggingface_live(query: str, top_k: int = TOP_K) -> list[tuple[str, f
 
         print(f"  [Live search: found {len(matched_passages)} passages in {scanned:,} samples]")
 
-        # Rank by embedding similarity
         query_embedding = embedder.encode([query], convert_to_numpy=True)
         passage_embeddings = embedder.encode(matched_passages, convert_to_numpy=True)
 
-        # Normalize for cosine similarity
         query_norm = query_embedding / np.linalg.norm(query_embedding, axis=1, keepdims=True)
         passage_norms = passage_embeddings / np.linalg.norm(passage_embeddings, axis=1, keepdims=True)
         similarities = (query_norm @ passage_norms.T)[0]
 
-        # Sort by similarity and return top-k
         ranked_indices = np.argsort(similarities)[::-1]
         results = []
         for idx in ranked_indices[:top_k]:
@@ -223,41 +242,28 @@ def search_huggingface_live(query: str, top_k: int = TOP_K) -> list[tuple[str, f
 
 
 def retrieve_context(query: str) -> tuple[str, str]:
-    """
-    Retrieve relevant passages using layered search:
-      1. Local FAISS index (fast, offline)
-      2. Live HuggingFace search (if local results are weak)
-
-    Returns (context_string, source_label).
-    """
-    # Layer 1: Local search
+    """Retrieve relevant passages using layered search."""
     local_results = search_local_index(query, TOP_K)
     best_local_score = max((s for _, s in local_results), default=0)
 
-    # Layer 2: Live search if local results aren't strong enough
     live_results = []
     if best_local_score < 0.5 and live_search_available:
         live_results = search_huggingface_live(query, TOP_K)
 
-    # Merge and deduplicate
     all_results = []
-
     for passage, score in local_results:
         all_results.append((passage, score, "local"))
 
     for passage, score in live_results:
-        # Avoid duplicates
         if not any(passage[:100] == existing[:100] for existing, _, _ in all_results):
             all_results.append((passage, score, "live"))
 
-    # Sort by score and take top-k
     all_results.sort(key=lambda x: x[1], reverse=True)
     top_results = all_results[:TOP_K]
 
     if not top_results:
         return "", "none"
 
-    # Build context string
     context_parts = []
     sources = set()
     for i, (passage, score, source) in enumerate(top_results):
@@ -273,32 +279,33 @@ def generate_response(prompt: str) -> str:
     context, source = retrieve_context(prompt)
 
     if context:
+        # Llama-2 style prompt
         full_prompt = (
-            f"Use the following information to answer the question.\n\n"
-            f"Information:\n{context}\n\n"
-            f"Question: {prompt}\n\n"
-            f"Answer:"
+            f"Below is some educational context. Use it to answer the question at the end.\n\n"
+            f"### Context:\n{context}\n\n"
+            f"### Question:\n{prompt}\n\n"
+            f"### Answer:\n"
         )
     else:
-        full_prompt = prompt
+        full_prompt = f"### Question:\n{prompt}\n\n### Answer:\n"
 
     # Tokenize
     inputs = tokenizer(
         full_prompt,
         return_tensors="pt",
         truncation=True,
-        max_length=model.config.n_positions - MAX_NEW_TOKENS
+        max_length=2048 - MAX_NEW_TOKENS
     ).to(device)
 
     # Generate
     with torch.no_grad():
         outputs = model.generate(
-            **inputs,
+            input_ids=inputs.input_ids,
+            attention_mask=inputs.attention_mask,
             max_new_tokens=MAX_NEW_TOKENS,
             temperature=TEMPERATURE,
             top_p=TOP_P,
-            repetition_penalty=1.2,
-            no_repeat_ngram_size=3,
+            repetition_penalty=1.1,
             do_sample=True,
             eos_token_id=tokenizer.eos_token_id,
             pad_token_id=tokenizer.pad_token_id
@@ -312,7 +319,7 @@ def generate_response(prompt: str) -> str:
 
 # --- Chat Loop ---
 print("\n" + "=" * 60)
-print("  GPT-2 Medium Chatbot")
+print("  Llama-2-13B Educational Chatbot")
 features = []
 if local_rag_available:
     features.append("Local RAG index")
@@ -326,15 +333,21 @@ print("  Type 'exit' to quit")
 print("=" * 60 + "\n")
 
 while True:
-    prompt = input("You: ").strip()
-    if not prompt:
-        continue
-    if prompt.lower() in ["exit", "quit"]:
-        print("Exiting chatbot...")
+    try:
+        prompt = input("You: ").strip()
+        if not prompt:
+            continue
+        if prompt.lower() in ["exit", "quit"]:
+            print("Exiting chatbot...")
+            break
+
+        response, source = generate_response(prompt)
+
+        if source != "none":
+            print(f"  [Source: {source}]")
+        print(f"Bot: {response}\n")
+    except KeyboardInterrupt:
+        print("\nExiting chatbot...")
         break
-
-    response, source = generate_response(prompt)
-
-    if source != "none":
-        print(f"  [Source: {source}]")
-    print(f"Bot: {response}\n")
+    except Exception as e:
+        print(f"\nError: {e}")

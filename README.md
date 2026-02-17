@@ -29,12 +29,13 @@ Think of it as a smarter tutor that can both reason *and* look things up.
 | :--- | :--- |
 | 🦙 **Llama-2-13B** | 13 billion parameter base model from Meta |
 | ⚡ **QLoRA** | 4-bit NF4 quantization — trains a 13B model on a single GPU |
-| 🚀 **H100 Optimized** | Flash Attention 2, BF16, TF32, batch 16, no gradient checkpointing |
+| 🚀 **H100 Optimized** | Flash Attention 2, BF16, TF32, Batch 2 / Accum 4 |
+| 🛡️ **Grad Checkpointing** | CRITICAL: Reduces activation VRAM from 40GB to ~4GB |
 | 📊 **Live Diagnostics** | Real-time it/s, tok/s, and ETA monitoring during training |
 | 📚 **1M Samples** | Streamed from FineWeb-Edu (never loads full dataset into RAM) |
 | 🔍 **RAG Chat** | FAISS vector search + live HuggingFace fallback |
 | 💾 **Auto-Resume** | Checkpoints save to Google Drive; training resumes if Colab disconnects |
-| 🛡️ **OOM Safety** | Graceful error handling with diagnostic output on memory failures |
+| 🧹 **Memory Cleanup** | Throttled MemoryCallback (every 50 steps) for max throughput |
 
 ---
 
@@ -50,7 +51,7 @@ FineWeb-Edu (1M samples)
                           LoRA Adapters (saved to Drive)
                                   │
                                   ▼
-                          RAG Chatbot
+                          RAG Chatbot (Llama-2-13B)
                          ┌─────────────┐
                          │ FAISS Index  │ ◄── 100K passages
                          │ (local)      │
@@ -69,19 +70,19 @@ FineWeb-Edu (1M samples)
   <tr><td><b>Quantization</b></td><td>4-bit NF4 + Double Quantization</td></tr>
   <tr><td><b>LoRA Rank</b></td><td>r=32, alpha=64, bias=none</td></tr>
   <tr><td><b>LoRA Targets</b></td><td><code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, <code>o_proj</code></td></tr>
-  <tr><td><b>Sequence Length</b></td><td>2,048 tokens</td></tr>
-  <tr><td><b>Batch Size</b></td><td>16 (no gradient accumulation)</td></tr>
-  <tr><td><b>Optimizer</b></td><td>Paged AdamW 32-bit</td></tr>
-  <tr><td><b>LR Schedule</b></td><td>Cosine (1e-4, 3% warmup)</td></tr>
+  <tr><td><b>Sequence Length</b></td><td>1,024 tokens (Optimized for VRAM)</td></tr>
+  <tr><td><b>Batch Size</b></td><td>2 per device (Gradient Accumulation 4)</td></tr>
+  <tr><td><b>Optimizer</b></td><td>AdamW 8-bit (bitsandbytes)</td></tr>
+  <tr><td><b>LR Schedule</b></td><td>Cosine (1e-4, 150 warmup steps)</td></tr>
   <tr><td><b>Precision</b></td><td>BFloat16 + TF32</td></tr>
   <tr><td><b>Attention</b></td><td>Flash Attention 2</td></tr>
-  <tr><td><b>Grad Checkpointing</b></td><td>Disabled (H100 has headroom)</td></tr>
-  <tr><td><b>Dataloader</b></td><td>8 workers, persistent, pinned, drop_last</td></tr>
-  <tr><td><b>Max Steps</b></td><td>5,000 (~45–60 min on H100)</td></tr>
+  <tr><td><b>Grad Checkpointing</b></td><td>Enabled (Required for 13B on 80GB)</td></tr>
+  <tr><td><b>Dataloader</b></td><td>4 workers, persistent, pinned, drop_last</td></tr>
+  <tr><td><b>Max Steps</b></td><td>5,000</td></tr>
   <tr><td><b>Hardware</b></td><td>NVIDIA H100 80GB HBM3</td></tr>
 </table>
 
-**Expected throughput**: ~1.2–1.6 it/s on H100.
+**Expected throughput**: ~1.1–1.3 it/s on H100 with checkpointing enabled.
 
 ---
 
@@ -89,22 +90,19 @@ FineWeb-Edu (1M samples)
 
 This project uses the **NousResearch/Llama-2-13b-hf** community mirror, which is **fully open and ungated** — no HuggingFace token or license acceptance is required. Just run the notebook and it downloads automatically.
 
-> 💡 **Want to use the official Meta model instead?** Change `MODEL_NAME` in the notebook to `meta-llama/Llama-2-13b-hf`. You'll need to:
-> 1. Accept the license at [meta-llama/Llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf)
-> 2. Create a [HuggingFace token](https://huggingface.co/settings/tokens) with Read access
-> 3. Add it as `HF_TOKEN` in your Colab secrets (🔑 icon in the sidebar)
-
 ---
 
 ## 📂 Project Structure
 
 ```
 fineweb-edu-llm-training/
-├── train.ipynb          # Fine-tuning notebook (Colab-ready, H100-optimized)
-├── chat_llm.py          # RAG chatbot with layered retrieval
-├── build_rag_index.py   # Standalone FAISS index builder
-├── README.md            # You are here
-└── out/                 # Model checkpoints & RAG index (git-ignored)
+├── train.ipynb          # Fine-tuning notebook (H100-optimized)
+├── chat_llm.py          # Llama-2-13B RAG chatbot
+├── build_rag_index.py   # FAISS index builder
+├── README.md            # Documentation
+└── out/
+    ├── final_model/     # LoRA adapters (adapter_config.json, etc.)
+    └── rag_index/       # FAISS index (faiss_index.bin, passages.npy)
 ```
 
 ---
@@ -114,23 +112,19 @@ fineweb-edu-llm-training/
 ### Cloud Training (Recommended)
 
 1. Upload `train.ipynb` to [Google Colab](https://colab.research.google.com)
-2. Set the runtime to **H100 GPU** (or A100 if H100 isn't available)
+2. Set the runtime to **H100 GPU**
 3. Run all cells — hardware diagnostics will confirm your setup
 4. Model and RAG index are saved to your Google Drive automatically
 
 ### Local Chat
 
-Once you've trained the model:
+Once you've trained the model and downloaded the files into the `out/` folder:
 
 ```bash
-# 1. Download from Google Drive
-#    → fineweb_edu_llama2_13b/final_model/
-#    → fineweb_edu_llama2_13b/rag_index/
-
-# 2. Install dependencies
+# 1. Install dependencies
 pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate
 
-# 3. Start chatting
+# 2. Start chatting
 python chat_llm.py
 ```
 
@@ -147,5 +141,5 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <div align="center">
-  <sub>Built with ❤️ using HuggingFace Transformers, PEFT, and a lot of GPU hours.</sub>
+  <sub>Built with ❤️ using HuggingFace Transformers, PEFT, and local H100 compute.</sub>
 </div>
