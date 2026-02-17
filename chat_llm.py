@@ -13,6 +13,7 @@ Usage:
 """
 
 import os
+os.environ['HF_HOME'] = 'D:/huggingface_cache'
 import re
 import torch
 import numpy as np
