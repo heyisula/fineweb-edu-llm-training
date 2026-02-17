@@ -16,6 +16,12 @@ import os
 os.environ['HF_HOME'] = 'D:/huggingface_cache'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TRANSFORMERS_VERBOSITY'] = 'error'
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+import warnings
+warnings.filterwarnings('ignore')
+import logging
+logging.disable(logging.WARNING)
 import re
 import json
 import inspect
