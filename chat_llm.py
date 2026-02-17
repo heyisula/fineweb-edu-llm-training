@@ -63,7 +63,7 @@ base_model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_ID,
     quantization_config=bnb_config,
     device_map="auto",
-    torch_dtype=torch.bfloat16,
+    dtype=torch.bfloat16,
     attn_implementation="flash_attention_2" if torch.cuda.is_available() else "eager"
 )
 
