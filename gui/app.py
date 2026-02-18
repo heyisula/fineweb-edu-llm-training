@@ -16,6 +16,10 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 import chat_llm
+import logging
+# Re-enable logging because chat_llm disables it
+logging.disable(logging.NOTSET)
+
 
 from flask import Flask, render_template, request, jsonify
 import threading
@@ -25,6 +29,12 @@ import gc
 from datetime import datetime
 import glob
 import multiprocessing
+import logging
+
+# Configure logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 
 # Explicitly set paths to avoid ambiguity when running from adjacent dirs
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -83,22 +93,26 @@ def load_model():
         model_state = {"status": "loading", "error": None}
 
     try:
+        print("Starting model load...")
         import torch
+        # logging.info(f"Torch imported. Cuda available: {torch.cuda.is_available()}")
         import numpy as np
         from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         from peft import PeftModel
+        # logging.info("Imports complete.")
 
         chat_llm.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {chat_llm.device}")
 
         # Tokenizer
-        print(f"Loading base model: {chat_llm.BASE_MODEL_ID}")
+        print(f"Loading base model tokenizer: {chat_llm.BASE_MODEL_ID}")
         chat_llm.tokenizer = AutoTokenizer.from_pretrained(
             chat_llm.BASE_MODEL_ID,
             clean_up_tokenization_spaces=True
         )
         chat_llm.tokenizer.pad_token = chat_llm.tokenizer.eos_token
         chat_llm.tokenizer.padding_side = "left"
+        # logging.info("Tokenizer loaded.")
 
         # Patch adapter config
         patch_adapter_config(chat_llm.ADAPTER_DIR)
@@ -113,6 +127,7 @@ def load_model():
 
         # Base model
         max_memory = {0: "7500MiB"}
+        print("Loading base model with quantization...")
         base_model = AutoModelForCausalLM.from_pretrained(
             chat_llm.BASE_MODEL_ID,
             quantization_config=bnb_config,
@@ -122,11 +137,13 @@ def load_model():
             torch_dtype=torch.float16,
             attn_implementation="sdpa"
         )
+        # logging.info("Base model loaded.")
 
         # LoRA adapters
         print(f"Applying LoRA adapters from: {chat_llm.ADAPTER_DIR}")
         chat_llm.model = PeftModel.from_pretrained(base_model, chat_llm.ADAPTER_DIR)
         chat_llm.model.eval()
+        # logging.info("LoRA adapters applied.")
 
         # Embedding model
         try:
@@ -165,9 +182,11 @@ def load_model():
 
         with model_lock:
             model_state = {"status": "ready", "error": None}
+        # logging.info("Model ready!")
         print("Model ready!")
 
     except Exception as e:
+        # logging.error(f"Model load failed: {e}", exc_info=True)
         print(f"Model load failed: {e}")
         with model_lock:
             model_state = {"status": "stopped", "error": str(e)}
@@ -186,9 +205,13 @@ def unload_model():
     chat_llm.local_rag_available = False
     chat_llm.live_search_available = False
 
+    # Force garbage collection to release Python objects
+    gc.collect()
+    
+    # Empty CUDA cache to release VRAM
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-    gc.collect()
+        torch.cuda.ipc_collect()
 
     with model_lock:
         model_state = {"status": "stopped", "error": None}
@@ -205,6 +228,7 @@ def index():
 
 @app.route("/api/model/status")
 def get_model_status():
+    # logging.info("Check status...") # Too spammy, maybe only errors?
     info = dict(model_state)
     # Add GPU info if available
     try:
@@ -213,7 +237,10 @@ def get_model_status():
             mem = torch.cuda.mem_get_info()
             info["vram_free_mb"] = round(mem[0] / 1024 / 1024)
             info["vram_total_mb"] = round(mem[1] / 1024 / 1024)
-    except:
+            info["gpu_name"] = torch.cuda.get_device_name(0)
+            info["model_name"] = "Llama-2 13B (FineWeb)"
+    except Exception as e:
+        # logging.error(f"Status check error: {e}")
         pass
     return jsonify(info)
 
@@ -307,4 +334,5 @@ if __name__ == "__main__":
     print("  InfoSage AI - 13B")
     print("  Open http://localhost:5000 in your browser")
     print("=" * 50 + "\n")
+    logging.info("Server starting...")
     app.run(host="0.0.0.0", port=5000, debug=False)

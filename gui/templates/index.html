@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
 
     <!-- Icons (Lucide) -->
@@ -21,14 +21,17 @@
 </head>
 
 <body>
+    <div class="ambient-background">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar glass-panel" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand">
-                    <div class="brand-logo">
-                        <i data-lucide="sparkles"></i>
-                    </div>
+                    <!-- Text-only branding as requested -->
                     <div class="brand-text">
                         <h1>InfoSage</h1>
                         <span class="badge">13B LOCAL</span>
@@ -46,6 +49,18 @@
                         <div class="pulse-ring" id="status-ring"></div>
                         <span class="status-label" id="status-text">Stopped</span>
                     </div>
+
+                    <div class="gpu-specs">
+                        <div class="spec-row">
+                            <span class="spec-label">Model Detected</span>
+                            <span class="spec-value" id="model-name">Llama-2 13B</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-label">Dedicated GPU</span>
+                            <span class="spec-value" id="gpu-name">NVIDIA RTX</span>
+                        </div>
+                    </div>
+
                     <div class="vram-bar-container" title="VRAM Usage">
                         <div class="vram-bar" id="vram-bar" style="width: 0%"></div>
                     </div>
@@ -71,7 +86,7 @@
             <div class="sidebar-footer">
                 <div class="feature-tags">
                     <span class="tag local"><i data-lucide="database"></i> Local RAG</span>
-                    <span class="tag live"><i data-lucide="globe"></i> Live Search</span>
+                    <span class="tag live"><i data-lucide="globe"></i> Live Knowledge</span>
                 </div>
             </div>
         </aside>
@@ -101,16 +116,16 @@
 
                     <div class="capabilities">
                         <div class="cap-card">
-                            <i data-lucide="shield"></i>
+                            <i data-lucide="shield-check"></i>
                             <span>100% Private</span>
                         </div>
                         <div class="cap-card">
-                            <i data-lucide="zap"></i>
-                            <span>RAG Enabled</span>
+                            <i data-lucide="database"></i>
+                            <span>Local RAG</span>
                         </div>
                         <div class="cap-card">
-                            <i data-lucide="globe"></i>
-                            <span>Web Search</span>
+                            <i data-lucide="sparkles"></i>
+                            <span>Live Knowledge</span>
                         </div>
                     </div>
                 </div>
@@ -132,7 +147,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v={{ version }}_final"></script>
     <script>
         lucide.createIcons();
     </script>

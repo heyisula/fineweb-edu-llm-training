@@ -1,10 +1,15 @@
 /* InfoSage AI - Interaction Logic */
+window.onerror = function (msg, url, line, col, error) {
+    alert("JS Error: " + msg + "\nLine: " + line);
+    return false;
+};
 
 // ─── State ───
 let currentChatId = null;
 let messages = [];
 let isGenerating = false;
 let statusPollTimer = null;
+let currentModelStatus = 'stopped';
 
 // ─── DOM Elements ───
 const els = {
@@ -16,6 +21,8 @@ const els = {
     statusText: document.getElementById('status-text'),
     vramBar: document.getElementById('vram-bar'),
     vramInfo: document.getElementById('vram-info'),
+    modelName: document.getElementById('model-name'),
+    gpuName: document.getElementById('gpu-name'),
     chatList: document.getElementById('chat-list'),
     chatTitle: document.getElementById('chat-title'),
     welcome: document.getElementById('welcome'),
@@ -42,6 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listener
     els.modelBtn.addEventListener('click', toggleModel);
+
+    // ─── Ambient System ───
+    document.addEventListener('mousemove', (e) => {
+        const x = e.clientX;
+        const y = e.clientY;
+
+        // Update CSS variables for spotlight
+        document.body.style.setProperty('--mouse-x', `${x}px`);
+        document.body.style.setProperty('--mouse-y', `${y}px`);
+
+        // Parallax effect for orbs
+        const orbs = document.querySelectorAll('.orb');
+        orbs.forEach((orb, index) => {
+            const speed = (index + 1) * 20;
+            const xOffset = (window.innerWidth / 2 - x) / speed;
+            const yOffset = (window.innerHeight / 2 - y) / speed;
+            orb.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+        });
+    });
 });
 
 // ─── Theme System ───
@@ -66,7 +92,7 @@ function updateThemeIcon(theme) {
     } else {
         els.themeIcon.setAttribute('data-lucide', 'sun');
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
 // ─── Model Logic ───
@@ -82,6 +108,7 @@ async function checkModelStatus() {
 
 function updateModelUI(data) {
     const status = (data.status || 'stopped').toLowerCase(); // Normalize
+    currentModelStatus = status;
 
     // Status Indicator
     els.statusRing.className = `pulse-ring ${status}`;
@@ -96,44 +123,46 @@ function updateModelUI(data) {
         els.vramInfo.textContent = `${(used / 1024).toFixed(1)} / ${(data.vram_total_mb / 1024).toFixed(0)} GB`;
     }
 
-    // Button State
-    const btnSpan = els.modelBtn.querySelector('span');
-    const btnIcon = els.modelBtn.querySelector('i');
+    if (data.gpu_name && els.gpuName) {
+        els.gpuName.textContent = data.gpu_name;
+    }
+    if (data.model_name && els.modelName) {
+        els.modelName.textContent = data.model_name;
+    }
 
+    // Button State
     if (status === 'stopped') {
         els.modelBtn.className = 'btn-primary';
-        btnSpan.textContent = 'Start Engine';
-        btnIcon.setAttribute('data-lucide', 'power');
         els.modelBtn.disabled = false;
+        els.modelBtn.innerHTML = '<i data-lucide="power"></i><span>Start Engine</span>';
     } else if (status === 'loading') {
         els.modelBtn.className = 'btn-primary loading';
-        btnSpan.textContent = 'Ignition...';
-        btnIcon.setAttribute('data-lucide', 'loader-2');
         els.modelBtn.disabled = true;
+        els.modelBtn.innerHTML = '<i data-lucide="loader-2"></i><span>Ignition...</span>';
     } else if (status === 'ready') {
         els.modelBtn.className = 'btn-primary stop';
-        btnSpan.textContent = 'Stop Engine';
-        btnIcon.setAttribute('data-lucide', 'square');
         els.modelBtn.disabled = false;
+        els.modelBtn.innerHTML = '<i data-lucide="square"></i><span>Stop Engine</span>';
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
 async function toggleModel() {
-    const statusText = els.statusText.textContent.toLowerCase();
-    const isStopped = statusText === 'stopped';
-    const isReady = statusText === 'ready';
-
-    if (isStopped) {
+    if (currentModelStatus === 'stopped') {
         // Optimistic UI Update
         updateModelUI({ status: 'loading' });
         try {
-            await fetch('/api/model/start', { method: 'POST' });
+            const res = await fetch('/api/model/start', { method: 'POST' });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error("Server error: " + res.status);
+            }
         } catch (e) {
             console.error("Failed to start:", e);
             updateModelUI({ status: 'stopped' });
         }
-    } else if (isReady) {
+    } else if (currentModelStatus === 'ready') {
         await fetch('/api/model/stop', { method: 'POST' });
     }
 
@@ -227,7 +256,7 @@ function renderMessage(role, content, source) {
 
     div.innerHTML = html;
     els.messages.appendChild(div);
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     els.messages.scrollTo({ top: els.messages.scrollHeight, behavior: 'smooth' });
 }
 
@@ -243,7 +272,7 @@ function showTyping() {
         </div>
     `;
     els.messages.appendChild(div);
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     return id;
 }
 

@@ -6,25 +6,30 @@
 /* ─── Variables & Tokens ─── */
 :root {
     /* Colors - Dark Mode Default */
-    --bg-app: #09090b;
-    --bg-panel: rgba(255, 255, 255, 0.06);
-    --bg-card: rgba(255, 255, 255, 0.04);
-    --bg-glass: rgba(255, 255, 255, 0.03);
+    --bg-app: #030304;
+    /* Pure dark base */
+    --bg-panel: rgba(10, 10, 12, 0.4);
+    /* GLASS: Very transparent dark */
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-glass: rgba(255, 255, 255, 0.05);
 
     /* Borders */
     --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-highlight: rgba(255, 255, 255, 0.12);
+    --border-highlight: rgba(255, 255, 255, 0.1);
 
     /* Text */
-    --text-primary: #f4f4f5;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    /* Slate 400 */
+    --text-muted: #64748b;
+    /* Slate 500 */
 
-    /* Accents */
-    --accent-primary: #6366f1;
-    /* Indigo 500 */
-    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-    --accent-glow: rgba(99, 102, 241, 0.25);
+    /* Accents - "Electric Azure" */
+    --accent-primary: #3b82f6;
+    /* Blue 500 */
+    --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+    /* Blue to Cyan */
+    --accent-glow: rgba(59, 130, 246, 0.5);
 
     /* Status */
     --status-green: #10b981;
@@ -32,37 +37,43 @@
     --status-red: #ef4444;
 
     /* Spacing & Radius */
-    --radius-lg: 16px;
-    --radius-md: 12px;
-    --radius-sm: 8px;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
     --sidebar-width: 280px;
 
     /* Effects */
-    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
-    --blur-panel: blur(24px);
+    --shadow-soft: 0 20px 50px rgba(0, 0, 0, 0.5);
+    /* Deep shadow for floating */
+    --blur-panel: blur(50px);
 
     /* Bubbles */
     --bubble-user: #27272a;
     --bubble-bot: transparent;
 }
 
+/* Light Mode Overrides */
 [data-theme="light"] {
     --bg-app: #f8fafc;
-    --bg-panel: rgba(255, 255, 255, 0.75);
-    --bg-card: rgba(241, 245, 249, 0.6);
-    --bg-glass: rgba(0, 0, 0, 0.02);
+    --bg-panel: rgba(255, 255, 255, 0.8);
+    --bg-card: rgba(255, 255, 255, 0.6);
+    --bg-glass: rgba(0, 0, 0, 0.04);
 
-    --border-subtle: rgba(0, 0, 0, 0.06);
-    --border-highlight: rgba(0, 0, 0, 0.1);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-highlight: rgba(0, 0, 0, 0.12);
 
+    /* Text needs to be dark in light mode */
     --text-primary: #0f172a;
-    --text-secondary: #64748b;
+    --text-secondary: #475569;
     --text-muted: #94a3b8;
 
-    --bubble-user: #e2e8f0;
+    --accent-primary: #2563eb;
+    --accent-gradient: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+
+    --bubble-user: #e4e4e7;
     --bubble-bot: transparent;
 
-    --shadow-soft: 0 4px 20px rgba(148, 163, 184, 0.15);
+    --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Reset & Base ─── */
@@ -74,32 +85,128 @@
 }
 
 body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background:
-        radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
-        radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.12), transparent 40%),
-        var(--bg-app);
+    background-color: var(--bg-app);
     color: var(--text-primary);
-    height: 100vh;
     overflow: hidden;
-    line-height: 1.5;
-    transition: background 0.4s ease, color 0.3s ease;
+    font-family: 'Outfit', sans-serif;
+    /* Modern geometric sans */
 }
 
-body::after {
-    content: "";
+/* ─── Ambient Background ─── */
+.ambient-background {
     position: fixed;
     inset: 0;
+    z-index: 0;
+    /* Background layer */
+    overflow: hidden;
+    background: var(--bg-app);
     pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-    z-index: 9999;
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    /* Soften orbs for new look */
+    opacity: 0.5;
+    animation: orb-float 20s infinite ease-in-out alternate;
+}
+
+.orb-1 {
+    width: 60vw;
+    height: 60vw;
+    background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
+    top: -20%;
+    left: -20%;
+    animation-duration: 25s;
+}
+
+.orb-2 {
+    width: 50vw;
+    height: 50vw;
+    background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+    /* Cyan orb */
+    bottom: -10%;
+    right: -10%;
+    animation-duration: 30s;
+    animation-delay: -5s;
+}
+
+.orb-3 {
+    width: 40vw;
+    height: 40vw;
+    background: radial-gradient(circle, #6366f1 0%, transparent 70%);
+    /* Indigo hint */
+    top: 40%;
+    left: 40%;
+    opacity: 0.2;
+    animation-duration: 35s;
+    animation-delay: -10s;
+}
+
+@keyframes orb-float {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    33% {
+        transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+        transform: translate(-20px, 20px) scale(0.95);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+/* ─── Spotlight Effect ─── */
+/* Added via JS to body: body.style.setProperty('--mouse-x', ...) */
+.glass-panel,
+.model-card,
+.input-wrapper,
+.sidebar {
+    position: relative;
+    overflow: hidden;
+    /* Contain the highlight */
+}
+
+.glass-panel::after,
+.model-card::after,
+.input-wrapper::after,
+.sidebar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+            rgba(255, 255, 255, 0.06),
+            transparent 40%);
+    z-index: 2;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.5s;
+}
+
+/* Light mode adjustment for spotlight */
+[data-theme="light"] .glass-panel::after,
+[data-theme="light"] .model-card::after {
+    background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+            rgba(99, 102, 241, 0.08),
+            transparent 40%);
 }
 
 /* ─── Structure ─── */
 .app-container {
+    position: relative;
+    z-index: 10;
+    /* Content layer */
     display: flex;
     height: 100vh;
     width: 100vw;
+    padding: 20px;
+    gap: 20px;
 }
 
 /* ─── Sidebar ─── */
@@ -108,36 +215,16 @@ body::after {
     display: flex;
     flex-direction: column;
 
+    /* GLASS EFFECT */
     background: var(--bg-panel);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: var(--blur-panel);
+    -webkit-backdrop-filter: var(--blur-panel);
 
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-soft);
 
-    position: relative;
-    z-index: 50;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sidebar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 0;
-    padding: 1px;
-    background: linear-gradient(180deg,
-            rgba(255, 255, 255, 0.25),
-            rgba(255, 255, 255, 0.05));
-    -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    z-index: 20;
 }
 
 .sidebar-header {
@@ -166,9 +253,15 @@ body::after {
 }
 
 .brand-text h1 {
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-family: 'JetBrains Mono', monospace;
+    /* Distinct font for Brand */
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .badge {
@@ -212,13 +305,37 @@ body::after {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .status-label {
     font-size: 12px;
     font-weight: 500;
     color: var(--text-secondary);
+}
+
+/* GPU Specs */
+.gpu-specs {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.spec-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.spec-label {
+    color: var(--text-muted);
+}
+
+.spec-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 /* Pulse Ring Animation */
@@ -314,10 +431,14 @@ body::after {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Fixed Hover State - Keep text readable */
 .btn-primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-    background: white;
+    filter: brightness(1.2);
+    /* Brighten instead of replacing with white */
+    color: white;
+    /* Ensure text stays white */
 }
 
 .btn-primary:active {
@@ -471,8 +592,18 @@ body::after {
     flex: 1;
     display: flex;
     flex-direction: column;
+
+    /* GLASS EFFECT */
+    background: var(--bg-panel);
+    backdrop-filter: var(--blur-panel);
+    -webkit-backdrop-filter: var(--blur-panel);
+
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-soft);
+
     position: relative;
-    background: var(--bg-app);
+    overflow: hidden;
 }
 
 .top-bar {
