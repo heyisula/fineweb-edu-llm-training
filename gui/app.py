@@ -304,7 +304,7 @@ def delete_history(chat_id):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     print("\n" + "=" * 50)
-    print("  Llama-2-13B Chatbot GUI")
+    print("  InfoSage AI - 13B")
     print("  Open http://localhost:5000 in your browser")
     print("=" * 50 + "\n")
     app.run(host="0.0.0.0", port=5000, debug=False)

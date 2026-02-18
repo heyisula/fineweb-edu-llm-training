@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nebula AI - Llama-2 13B</title>
+    <title>InfoSage - Llama-2 13B</title>
     <meta name="description" content="Premium local AI interface powered by Llama-2 13B">
 
     <!-- Fonts -->
@@ -30,7 +30,7 @@
                         <i data-lucide="sparkles"></i>
                     </div>
                     <div class="brand-text">
-                        <h1>Nebula AI</h1>
+                        <h1>InfoSage</h1>
                         <span class="badge">13B LOCAL</span>
                     </div>
                 </div>
@@ -51,7 +51,7 @@
                     </div>
                     <div class="vram-values" id="vram-info">0 / 8 GB</div>
                 </div>
-                <button class="btn-primary" id="model-btn" onclick="toggleModel()">
+                <button class="btn-primary" id="model-btn">
                     <i data-lucide="power"></i>
                     <span>Start Engine</span>
                 </button>
@@ -96,7 +96,7 @@
                     <div class="empty-icon-wrapper">
                         <i data-lucide="bot"></i>
                     </div>
-                    <h1>Welcome into Nebula</h1>
+                    <h1>Welcome to InfoSage</h1>
                     <p>Your private, local intelligence engine is ready.</p>
 
                     <div class="capabilities">
@@ -118,14 +118,14 @@
 
             <div class="input-container glass-blur">
                 <div class="input-wrapper focus-ring">
-                    <textarea id="input" placeholder="Message Nebula..." rows="1" onkeydown="handleKey(event)"
+                    <textarea id="input" placeholder="Message InfoSage..." rows="1" onkeydown="handleKey(event)"
                         oninput="autoResize(this)"></textarea>
                     <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
                         <i data-lucide="arrow-up"></i>
                     </button>
                 </div>
                 <div class="input-footer">
-                    <span>Protip: Press <kbd>Return</kbd> to send, <kbd>Shift + Return</kbd> for new line</span>
+                    <span>Protip: Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line</span>
                 </div>
             </div>
         </main>

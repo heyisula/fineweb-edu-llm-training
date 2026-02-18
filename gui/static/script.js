@@ -1,4 +1,4 @@
-/* Nebula AI - Interaction Logic */
+/* InfoSage AI - Interaction Logic */
 
 // ─── State ───
 let currentChatId = null;
@@ -38,8 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     statusPollTimer = setInterval(checkModelStatus, 3000);
-    statusPollTimer = setInterval(checkModelStatus, 3000);
     if (window.lucide) lucide.createIcons();
+
+    // Event Listener
+    els.modelBtn.addEventListener('click', toggleModel);
 });
 
 // ─── Theme System ───
@@ -79,7 +81,7 @@ async function checkModelStatus() {
 }
 
 function updateModelUI(data) {
-    const status = data.status || 'stopped';
+    const status = (data.status || 'stopped').toLowerCase(); // Normalize
 
     // Status Indicator
     els.statusRing.className = `pulse-ring ${status}`;
@@ -99,26 +101,44 @@ function updateModelUI(data) {
     const btnIcon = els.modelBtn.querySelector('i');
 
     if (status === 'stopped') {
-        els.modelBtn.classList.remove('danger');
+        els.modelBtn.className = 'btn-primary';
         btnSpan.textContent = 'Start Engine';
         btnIcon.setAttribute('data-lucide', 'power');
+        els.modelBtn.disabled = false;
     } else if (status === 'loading') {
+        els.modelBtn.className = 'btn-primary loading';
         btnSpan.textContent = 'Ignition...';
         btnIcon.setAttribute('data-lucide', 'loader-2');
+        els.modelBtn.disabled = true;
     } else if (status === 'ready') {
-        els.modelBtn.classList.add('danger');
+        els.modelBtn.className = 'btn-primary stop';
         btnSpan.textContent = 'Stop Engine';
         btnIcon.setAttribute('data-lucide', 'square');
+        els.modelBtn.disabled = false;
     }
     lucide.createIcons();
 }
 
 async function toggleModel() {
-    const isStopped = els.statusText.textContent === 'Stopped';
-    const endpoint = isStopped ? '/api/model/start' : '/api/model/stop';
+    const statusText = els.statusText.textContent.toLowerCase();
+    const isStopped = statusText === 'stopped';
+    const isReady = statusText === 'ready';
 
-    await fetch(endpoint, { method: 'POST' });
-    checkModelStatus();
+    if (isStopped) {
+        // Optimistic UI Update
+        updateModelUI({ status: 'loading' });
+        try {
+            await fetch('/api/model/start', { method: 'POST' });
+        } catch (e) {
+            console.error("Failed to start:", e);
+            updateModelUI({ status: 'stopped' });
+        }
+    } else if (isReady) {
+        await fetch('/api/model/stop', { method: 'POST' });
+    }
+
+    // Poll shortly after
+    setTimeout(checkModelStatus, 1000);
 }
 
 // ─── Chat Logic ───

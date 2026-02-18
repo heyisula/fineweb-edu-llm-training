@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧠 FineWeb-Edu LLM Training
+# 🧠 InfoSage
 
-**QLoRA fine-tuning of Llama-2-13B on educational web content, with a RAG-powered chatbot.**
+**Private, local AI interface powered by Llama-2-13B and FineWeb-Edu.**
 
 [![Model](https://img.shields.io/badge/Model-Llama--2--13B-blueviolet)](https://huggingface.co/NousResearch/Llama-2-13b-hf)
 [![Dataset](https://img.shields.io/badge/Dataset-FineWeb--Edu-blue)](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
@@ -20,7 +20,7 @@ This project fine-tunes **Meta's Llama-2 13B** on **1 million educational passag
 
 Training happens on an H100 in the cloud, but the resulting model runs locally on consumer GPUs with as little as 8GB VRAM using 4-bit quantization.
 
-There's also a **RAG chatbot** (`chat_llm.py`) that doesn't just rely on what the model memorized during training. It searches a local FAISS knowledge base first, and if results aren't good enough, it falls back to a live search on HuggingFace.
+There's also the **InfoSage RAG chatbot** (`chat_llm.py`) that doesn't just rely on what the model memorized during training. It searches a local FAISS knowledge base first, and if results aren't good enough, it falls back to a live search on HuggingFace.
 
 ---
 
