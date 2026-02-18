@@ -1,6 +1,7 @@
 # Model outputs,checkpoints, rag indexes
 out/
 __pycache__/
+gui/chat_history/
 
 # OS-specific files
 .DS_Store

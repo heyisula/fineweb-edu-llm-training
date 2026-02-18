@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llama-2 13B Chatbot</title>
+    <meta name="description" content="Local AI chatbot powered by Llama-2 13B with RAG and live search">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🦙</span>
+                    <span class="logo-text">Llama-2 13B</span>
+                </div>
+            </div>
+
+            <!-- Model Controls -->
+            <div class="model-panel">
+                <div class="model-status">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span class="status-text" id="status-text">Stopped</span>
+                </div>
+                <div class="vram-info" id="vram-info"></div>
+                <button class="model-btn" id="model-btn" onclick="toggleModel()">
+                    Start Model
+                </button>
+            </div>
+
+            <button class="new-chat-btn" onclick="newChat()">
+                <span>+</span> New Chat
+            </button>
+
+            <div class="chat-list" id="chat-list">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="footer-text">RAG + Live Search</div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <div class="chat-header">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <h2 id="chat-title">New Conversation</h2>
+                <button class="delete-btn" id="delete-btn" onclick="deleteCurrentChat()" title="Delete conversation">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="messages" id="messages">
+                <div class="welcome-message" id="welcome">
+                    <div class="welcome-icon">🦙</div>
+                    <h3>Llama-2 13B Educational Chatbot</h3>
+                    <p>Start the model and ask me anything. I search a local knowledge base and can query HuggingFace live for the best answers.</p>
+                    <div class="welcome-features">
+                        <div class="feature-pill">
+                            <span class="feature-dot local"></span>Local FAISS Index
+                        </div>
+                        <div class="feature-pill">
+                            <span class="feature-dot live"></span>Live HuggingFace Search
+                        </div>
+                        <div class="feature-pill">
+                            <span class="feature-dot model"></span>13B Parameters
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper" id="input-wrapper">
+                    <textarea id="input" placeholder="Ask something..." rows="1"
+                              onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+                    <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send message (Enter)">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-hint">Enter to send, Shift+Enter for new line</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
