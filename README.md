@@ -19,28 +19,40 @@
 
 ---
 
-## Key Capabilities
+## 🏗️ Technical Workflow
 
-### Advanced Architecture
-*   **Hybrid RAG Pipeline**: Integrates local FAISS vector search with a live HuggingFace fallback mechanism for real-time knowledge synthesis.
-*   **4-Bit Quantization**: Utilizes NormalFloat (NF4) to deploy a 13-billion parameter model on consumer hardware (8GB VRAM).
-*   **Precision Text Synthesis**: Integrated word segmentation post-processing to ensure human-grade readability and fix fine-tuning artifacts.
+### 1. Cloud-Scale Fine-Tuning
+*   **Infrastructure**: Accelerated via **NVIDIA H100 80GB** (Google Colab / Cloud).
+*   **Methodology**: `QLoRA` 4-bit training with Flash Attention 2 and Gradient Checkpointing.
+*   **Process**: Open `train.ipynb` in Colab, mount Google Drive, and execute. LoRA adapters and the RAG index are automatically exported to your Drive.
 
-### Premium Interface (Electric Azure)
-*   **Liquid Glass Aesthetics**: High-fidelity glassmorphism with dynamic depth and animated ambient lighting.
-*   **Hardware Telemetry**: Real-time diagnostics for VRAM utilization and dedicated GPU identification.
-*   **Asynchronous Management**: Independent model loading/unloading with persistent state feedback.
+### 2. Artifact Relocation
+Once training is finalized, relocate the output artifacts to the local project structure for inference:
+*   Move adapters to: `out/final_model/`
+*   Move FAISS index to: `out/rag_index/`
+
+### 3. Local Synthesis Engine
+*   **Inference Hardware**: Consumer-grade **NVIDIA RTX** (e.g., 4060 8GB).
+*   **Deployment**: Low-VRAM mapping (`7500MiB` limit) with SDPA attention for Windows compatibility.
 
 ---
 
-## Technical Workflow
+## Key Capabilities
+
+*   **Hybrid RAG Pipeline**: Integrates local FAISS vector search with a live HuggingFace fallback mechanism for real-time knowledge synthesis.
+*   **Precision Text Synthesis**: Integrated word segmentation post-processing to ensure human-grade readability and fix fine-tuning artifacts.
+*   **Electric Azure UI**: Premium glassmorphism interface with real-time VRAM/GPU diagnostics.
+
+---
+
+## Technical Architecture
 
 ```mermaid
 graph TD
     A[FineWeb-Edu 1M] --> B[Streaming Tokenizer]
     B --> C[QLoRA H100 Training]
     C --> D[LoRA Adapters]
-    D --> E[InfoSage Runtime]
+    D --> E[Inference Engine]
     E <--> F[(Local FAISS Index)]
     E <--> G[Live Cloud Search]
     E --> H[Electric Azure UI]
@@ -57,16 +69,21 @@ graph TD
 
 ### 🖥️ Running the Application
 
-**Option 1: Premium Web Interface (Recommended)**
+**Option 1: Desktop Interface (Recommended)**
 ```bash
 python gui/app.py
 # Access via http://localhost:5000
 ```
 
-**Option 2: Terminal / CLI Mode**
+**Option 2: Terminal Mode**
 ```bash
 python chat_llm.py
-# Interactive session within the console
+```
+
+**Option 3: RAG Maintenance**
+```bash
+# Rebuild the local knowledge base separately if needed
+python build_rag_index.py
 ```
 
 ---
@@ -83,14 +100,6 @@ python chat_llm.py
 
 ---
 
-## Repository Structure
-*   **`gui/`**: Dashboard frontend and Flask backend logic.
-*   **`chat_llm.py`**: Core inference engine and RAG pipeline.
-*   **`build_rag_index.py`**: Vector index constructor for local storage.
-*   **`train.ipynb`**: H100-optimized training pipeline.
-
----
-
 <div align="center">
-  <sub>Developed for privacy-conscious intelligence. InfoSage is licensed under the MIT framework.</sub>
+  <sub>Developed for privacy-conscious intelligence. Licensed under the MIT framework.</sub>
 </div>
