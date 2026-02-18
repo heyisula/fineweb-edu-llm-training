@@ -26,7 +26,11 @@ from datetime import datetime
 import glob
 import multiprocessing
 
-app = Flask(__name__)
+# Explicitly set paths to avoid ambiguity when running from adjacent dirs
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, 
+            static_folder=os.path.join(BASE_DIR, 'static'),
+            template_folder=os.path.join(BASE_DIR, 'templates'))
 
 # Model state
 model_state = {"status": "stopped", "error": None}
@@ -195,7 +199,8 @@ def unload_model():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    import random
+    return render_template("index.html", version=random.randint(1, 10000))
 
 
 @app.route("/api/model/status")

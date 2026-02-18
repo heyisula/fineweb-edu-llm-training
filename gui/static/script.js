@@ -1,3 +1,5 @@
+/* Nebula AI - Interaction Logic */
+
 // ─── State ───
 let currentChatId = null;
 let messages = [];
@@ -5,31 +7,67 @@ let isGenerating = false;
 let statusPollTimer = null;
 
 // ─── DOM Elements ───
-const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('input');
-const sendBtn = document.getElementById('send-btn');
-const modelBtn = document.getElementById('model-btn');
-const statusDot = document.getElementById('status-dot');
-const statusText = document.getElementById('status-text');
-const vramInfo = document.getElementById('vram-info');
-const chatList = document.getElementById('chat-list');
-const chatTitle = document.getElementById('chat-title');
-const deleteBtn = document.getElementById('delete-btn');
+const els = {
+    messages: document.getElementById('messages'),
+    input: document.getElementById('input'),
+    sendBtn: document.getElementById('send-btn'),
+    modelBtn: document.getElementById('model-btn'),
+    statusRing: document.getElementById('status-ring'),
+    statusText: document.getElementById('status-text'),
+    vramBar: document.getElementById('vram-bar'),
+    vramInfo: document.getElementById('vram-info'),
+    chatList: document.getElementById('chat-list'),
+    chatTitle: document.getElementById('chat-title'),
+    welcome: document.getElementById('welcome'),
+    sidebar: document.getElementById('sidebar'),
+    themeIcon: document.getElementById('theme-icon')
+};
 
-// ─── Initialize ───
+// ─── Initialization ───
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     checkModelStatus();
     loadChatList();
-    inputEl.focus();
-    // Poll model status every 3 seconds
+    els.input.focus();
+
+    // Auto-resize input
+    els.input.addEventListener('input', () => {
+        const hasText = els.input.value.trim().length > 0;
+        els.sendBtn.disabled = !hasText;
+        autoResize(els.input);
+    });
+
     statusPollTimer = setInterval(checkModelStatus, 3000);
+    statusPollTimer = setInterval(checkModelStatus, 3000);
+    if (window.lucide) lucide.createIcons();
 });
 
+// ─── Theme System ───
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
 
-// ═══════════════════════════════════════════════════════
-//  MODEL CONTROLS
-// ═══════════════════════════════════════════════════════
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
 
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeIcon(next);
+}
+
+function updateThemeIcon(theme) {
+    if (theme === 'dark') {
+        els.themeIcon.setAttribute('data-lucide', 'moon');
+    } else {
+        els.themeIcon.setAttribute('data-lucide', 'sun');
+    }
+    lucide.createIcons();
+}
+
+// ─── Model Logic ───
 async function checkModelStatus() {
     try {
         const res = await fetch('/api/model/status');
@@ -42,98 +80,69 @@ async function checkModelStatus() {
 
 function updateModelUI(data) {
     const status = data.status || 'stopped';
-    statusDot.className = 'status-dot ' + status;
 
-    const labels = {
-        stopped: 'Stopped',
-        loading: 'Loading model...',
-        ready: 'Ready'
-    };
-    statusText.textContent = data.error
-        ? 'Error: ' + data.error.substring(0, 60)
-        : (labels[status] || status);
+    // Status Indicator
+    els.statusRing.className = `pulse-ring ${status}`;
+    els.statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
 
-    // VRAM info
+    // VRAM Bar
     if (data.vram_free_mb && data.vram_total_mb) {
         const used = data.vram_total_mb - data.vram_free_mb;
-        vramInfo.textContent = `VRAM: ${used} / ${data.vram_total_mb} MB`;
-    } else {
-        vramInfo.textContent = '';
+        const pct = (used / data.vram_total_mb) * 100;
+
+        els.vramBar.style.width = `${pct}%`;
+        els.vramInfo.textContent = `${(used / 1024).toFixed(1)} / ${(data.vram_total_mb / 1024).toFixed(0)} GB`;
     }
 
-    // Button state
+    // Button State
+    const btnSpan = els.modelBtn.querySelector('span');
+    const btnIcon = els.modelBtn.querySelector('i');
+
     if (status === 'stopped') {
-        modelBtn.textContent = 'Start Model';
-        modelBtn.className = 'model-btn';
-        modelBtn.disabled = false;
+        els.modelBtn.classList.remove('danger');
+        btnSpan.textContent = 'Start Engine';
+        btnIcon.setAttribute('data-lucide', 'power');
     } else if (status === 'loading') {
-        modelBtn.textContent = 'Loading...';
-        modelBtn.className = 'model-btn';
-        modelBtn.disabled = true;
+        btnSpan.textContent = 'Ignition...';
+        btnIcon.setAttribute('data-lucide', 'loader-2');
     } else if (status === 'ready') {
-        modelBtn.textContent = 'Stop Model';
-        modelBtn.className = 'model-btn stop';
-        modelBtn.disabled = false;
+        els.modelBtn.classList.add('danger');
+        btnSpan.textContent = 'Stop Engine';
+        btnIcon.setAttribute('data-lucide', 'square');
     }
+    lucide.createIcons();
 }
 
 async function toggleModel() {
-    try {
-        const res = await fetch('/api/model/status');
-        const data = await res.json();
+    const isStopped = els.statusText.textContent === 'Stopped';
+    const endpoint = isStopped ? '/api/model/start' : '/api/model/stop';
 
-        if (data.status === 'stopped') {
-            await fetch('/api/model/start', { method: 'POST' });
-            // Poll faster during loading
-            const fastPoll = setInterval(async () => {
-                try {
-                    const r = await fetch('/api/model/status');
-                    const d = await r.json();
-                    updateModelUI(d);
-                    if (d.status !== 'loading') clearInterval(fastPoll);
-                } catch {
-                    clearInterval(fastPoll);
-                }
-            }, 2000);
-        } else if (data.status === 'ready') {
-            await fetch('/api/model/stop', { method: 'POST' });
-        }
-
-        checkModelStatus();
-    } catch (err) {
-        showToast('Failed to toggle model: ' + err.message);
-    }
+    await fetch(endpoint, { method: 'POST' });
+    checkModelStatus();
 }
 
-
-// ═══════════════════════════════════════════════════════
-//  CHAT
-// ═══════════════════════════════════════════════════════
-
+// ─── Chat Logic ───
 async function sendMessage() {
-    const text = inputEl.value.trim();
+    const text = els.input.value.trim();
     if (!text || isGenerating) return;
 
-    // Hide welcome screen
-    const welcomeEl = document.getElementById('welcome');
-    if (welcomeEl) welcomeEl.style.display = 'none';
-
-    // Create new chat if needed
+    if (els.welcome) els.welcome.style.display = 'none';
     if (!currentChatId) {
         currentChatId = generateId();
         messages = [];
     }
 
-    // Add user message
-    messages.push({ role: 'user', content: text });
+    // UI Updates
     renderMessage('user', text);
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
+    messages.push({ role: 'user', content: text });
 
-    // Show typing
+    els.input.value = '';
+    els.input.style.height = 'auto';
+    els.sendBtn.disabled = true;
     isGenerating = true;
-    sendBtn.disabled = true;
-    showTyping();
+
+    // Show Typing
+    const typingID = showTyping();
 
     try {
         const res = await fetch('/api/chat', {
@@ -142,200 +151,146 @@ async function sendMessage() {
             body: JSON.stringify({ message: text })
         });
 
-        hideTyping();
         const data = await res.json();
+        removeTyping(typingID);
 
         if (data.error) {
-            renderMessage('bot', data.error, 'none');
-            messages.push({ role: 'bot', content: data.error, source: 'none' });
+            renderMessage('bot', `⚠️ Error: ${data.error}`);
         } else {
             renderMessage('bot', data.response, data.source);
             messages.push({ role: 'bot', content: data.response, source: data.source });
         }
 
-        // Update title from first user message
-        const firstMsg = messages.find(m => m.role === 'user');
-        if (firstMsg) {
-            const title = firstMsg.content.substring(0, 60) + (firstMsg.content.length > 60 ? '...' : '');
-            chatTitle.textContent = title;
+        // Update title
+        if (messages.length === 2) {
+            const title = text.slice(0, 40) + (text.length > 40 ? '...' : '');
+            els.chatTitle.textContent = title;
         }
 
-        // Auto-save
-        await saveChat();
+        saveChat();
         loadChatList();
 
-    } catch (err) {
-        hideTyping();
-        renderMessage('bot', 'Connection error: ' + err.message, 'none');
-        messages.push({ role: 'bot', content: 'Connection error: ' + err.message, source: 'none' });
+    } catch (e) {
+        removeTyping(typingID);
+        renderMessage('bot', `⚠️ Connection Failure: ${e.message}`);
     }
 
     isGenerating = false;
-    sendBtn.disabled = false;
-    inputEl.focus();
+    els.input.focus();
 }
 
 function renderMessage(role, content, source) {
     const div = document.createElement('div');
-    div.className = 'message ' + role;
+    div.className = `message ${role}`;
 
-    let html = '<div class="message-label">' + (role === 'user' ? 'You' : 'Bot') + '</div>';
-    html += '<div class="message-bubble">';
+    const initial = role === 'user' ? 'You' : 'AI';
+    const icon = role === 'user' ? 'user' : 'bot';
 
-    // Source badges for bot messages
-    if (role === 'bot' && source && source !== 'none') {
-        const parts = source.split(' + ');
-        html += '<div>';
-        parts.forEach(s => {
-            const cls = s.trim().toLowerCase();
-            html += '<span class="source-badge ' + cls + '">' + escapeHtml(s.trim()) + '</span>';
+    let html = `
+        <div class="msg-avatar">
+            <i data-lucide="${icon}"></i>
+        </div>
+        <div class="msg-content">
+            <div class="msg-bubble">${escapeHtml(content)}</div>
+    `;
+
+    if (source && source !== 'none') {
+        html += `<div class="source-pills">`;
+        source.split(' + ').forEach(s => {
+            const type = s.toLowerCase().includes('local') ? 'local' : 'live';
+            html += `<span class="source-pill ${type}">${s}</span>`;
         });
-        html += '</div>';
+        html += `</div>`;
     }
 
-    html += '<div>' + escapeHtml(content) + '</div>';
-    html += '</div>';
+    html += `</div>`; // Close content
 
     div.innerHTML = html;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    els.messages.appendChild(div);
+    lucide.createIcons();
+    els.messages.scrollTo({ top: els.messages.scrollHeight, behavior: 'smooth' });
 }
 
 function showTyping() {
+    const id = 'typing-' + Date.now();
     const div = document.createElement('div');
-    div.className = 'message bot';
-    div.id = 'typing-msg';
+    div.className = 'message bot typing';
+    div.id = id;
     div.innerHTML = `
-        <div class="message-label">Bot</div>
-        <div class="message-bubble">
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
+        <div class="msg-avatar"><i data-lucide="bot"></i></div>
+        <div class="msg-content">
+            <div class="msg-bubble">Thinking...</div>
         </div>
     `;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    els.messages.appendChild(div);
+    lucide.createIcons();
+    return id;
 }
 
-function hideTyping() {
-    const el = document.getElementById('typing-msg');
+function removeTyping(id) {
+    const el = document.getElementById(id);
     if (el) el.remove();
 }
 
-
-// ═══════════════════════════════════════════════════════
-//  CHAT HISTORY
-// ═══════════════════════════════════════════════════════
-
+// ─── Chat History ───
 async function saveChat() {
-    if (!currentChatId || messages.length === 0) return;
-
-    const firstMsg = messages.find(m => m.role === 'user');
-    const title = firstMsg
-        ? firstMsg.content.substring(0, 60) + (firstMsg.content.length > 60 ? '...' : '')
-        : 'New Conversation';
-
-    try {
-        await fetch('/api/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id: currentChatId,
-                title: title,
-                messages: messages
-            })
-        });
-    } catch { }
+    if (!currentChatId) return;
+    await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: currentChatId,
+            title: els.chatTitle.textContent,
+            messages
+        })
+    });
 }
 
 async function loadChatList() {
-    try {
-        const res = await fetch('/api/history');
-        const chats = await res.json();
+    const res = await fetch('/api/history');
+    const chats = await res.json();
 
-        chatList.innerHTML = '';
-        chats.forEach(chat => {
-            const div = document.createElement('div');
-            div.className = 'chat-item' + (chat.id === currentChatId ? ' active' : '');
-            div.setAttribute('data-id', chat.id);
-            div.onclick = () => loadChat(chat.id);
-
-            const date = chat.created ? new Date(chat.created) : null;
-            const dateStr = date ? date.toLocaleDateString('en-US', {
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            }) : '';
-
-            div.innerHTML =
-                '<div class="chat-item-title">' + escapeHtml(chat.title) + '</div>' +
-                '<div class="chat-item-date">' + dateStr + '</div>';
-
-            chatList.appendChild(div);
-        });
-    } catch { }
+    els.chatList.innerHTML = chats.map(c => `
+        <div class="history-item ${c.id === currentChatId ? 'active' : ''}" 
+             onclick="loadChat('${c.id}')">
+            <div class="history-title">${escapeHtml(c.title)}</div>
+        </div>
+    `).join('');
 }
 
-async function loadChat(chatId) {
-    try {
-        const res = await fetch('/api/history/' + chatId);
-        const data = await res.json();
+async function loadChat(id) {
+    const res = await fetch(`/api/history/${id}`);
+    const data = await res.json();
 
-        currentChatId = data.id;
-        messages = data.messages || [];
+    currentChatId = data.id;
+    messages = data.messages || [];
+    els.chatTitle.textContent = data.title;
 
-        // Clear and re-render
-        messagesEl.innerHTML = '';
-        chatTitle.textContent = data.title || 'Conversation';
+    // Clear & Re-render
+    els.messages.innerHTML = '';
+    if (els.welcome) els.welcome.style.display = messages.length ? 'none' : 'block';
 
-        messages.forEach(msg => {
-            renderMessage(msg.role, msg.content, msg.source);
-        });
-
-        loadChatList();
-    } catch (err) {
-        showToast('Failed to load chat');
-    }
+    messages.forEach(m => renderMessage(m.role, m.content, m.source));
+    loadChatList();
 }
 
 function newChat() {
     currentChatId = null;
     messages = [];
-    messagesEl.innerHTML = `
-        <div class="welcome-message" id="welcome">
-            <div class="welcome-icon">🦙</div>
-            <h3>Llama-2 13B Educational Chatbot</h3>
-            <p>Start the model and ask me anything. I search a local knowledge base and can query HuggingFace live for the best answers.</p>
-            <div class="welcome-features">
-                <div class="feature-pill"><span class="feature-dot local"></span>Local FAISS Index</div>
-                <div class="feature-pill"><span class="feature-dot live"></span>Live HuggingFace Search</div>
-                <div class="feature-pill"><span class="feature-dot model"></span>13B Parameters</div>
-            </div>
-        </div>
-    `;
-    chatTitle.textContent = 'New Conversation';
+    els.messages.innerHTML = '';
+    els.messages.appendChild(els.welcome);
+    els.welcome.style.display = 'block';
+    els.chatTitle.textContent = 'New Conversation';
     loadChatList();
-    inputEl.focus();
 }
 
 async function deleteCurrentChat() {
-    if (!currentChatId) return;
-    if (!confirm('Delete this conversation?')) return;
-
-    try {
-        await fetch('/api/history/' + currentChatId, { method: 'DELETE' });
-        newChat();
-        loadChatList();
-    } catch {
-        showToast('Failed to delete chat');
-    }
+    if (!currentChatId || !confirm('Delete this chat?')) return;
+    await fetch(`/api/history/${currentChatId}`, { method: 'DELETE' });
+    newChat();
 }
 
-
-// ═══════════════════════════════════════════════════════
-//  UTILITIES
-// ═══════════════════════════════════════════════════════
-
+// ─── Utilities ───
 function handleKey(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -345,41 +300,19 @@ function handleKey(e) {
 
 function autoResize(el) {
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
 }
 
 function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+    return Math.random().toString(36).substr(2, 9);
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.innerText = text;
     return div.innerHTML;
 }
 
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('hidden');
-}
-
-function showToast(message) {
-    // Remove existing toast
-    const existing = document.querySelector('.toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    // Trigger animation
-    requestAnimationFrame(() => {
-        toast.classList.add('visible');
-    });
-
-    setTimeout(() => {
-        toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    els.sidebar.classList.toggle('open');
 }
