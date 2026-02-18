@@ -3,36 +3,37 @@
 # 🧠 InfoSage AI
 ### Advanced Local Intelligence Engine for Educational Synthesis
 
-**An enterprise-grade interface for Llama-2-13B, fine-tuned on the FineWeb-Edu corpus.**
+**A high-performance interface for Llama-2-13B, fine-tuned on the FineWeb-Edu corpus.**
 
 [![Model](https://img.shields.io/badge/Model-Llama--2--13B-3b82f6)](https://huggingface.co/NousResearch/Llama-2-13b-hf)
 [![Dataset](https://img.shields.io/badge/Dataset-FineWeb--Edu-06b6d4)](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
-[![Interface](https://img.shields.io/badge/UI-Electric--Azure-blue)](https://github.com/heyisula/fineweb-edu-llm-training)
+[![Training](https://img.shields.io/badge/Training-H100_80GB-22c55e)](https://www.nvidia.com/en-us/data-center/h100/)
+[![Inference](https://img.shields.io/badge/Inference-RTX_4060_8GB-f97316)](https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4060-family/)
 [![License](https://img.shields.io/badge/License-MIT-gray)](LICENSE)
 
 ---
 
-**InfoSage** is a high-performance, local-first AI ecosystem designed for synthesis and retrieval of educational content. By combining Meta's **Llama-2-13B** architecture with a massive scale **1M sample fine-tune** from the FineWeb-Edu dataset, InfoSage provides superior answering capabilities while maintaining 100% data privacy.
+**InfoSage** is a local-centric AI ecosystem designed for the synthesis of educational content. By leveraging Meta's **Llama-2-13B** architecture with a **1M sample fine-tune** from the FineWeb-Edu dataset, the system provides superior answering capabilities while ensuring complete data privacy.
 
 </div>
 
 ---
 
-## 🚀 Key Capabilities
+## Key Capabilities
 
-### 🔹 Advanced Architecture
-*   **Hybrid RAG Pipeline**: Seamlessly integrates local FAISS vector search with a live HuggingFace fallback mechanism for real-time knowledge synthesis.
-*   **Quantized Optimization**: Utilizes 4-bit NormalFloat (NF4) quantization to deploy a 13-billion parameter model on standard consumer hardware (8GB VRAM).
-*   **Precision Text Synthesis**: Integrated word segmentation post-processing to eliminate spacing artifacts and ensure human-grade readability.
+### Advanced Architecture
+*   **Hybrid RAG Pipeline**: Integrates local FAISS vector search with a live HuggingFace fallback mechanism for real-time knowledge synthesis.
+*   **4-Bit Quantization**: Utilizes NormalFloat (NF4) to deploy a 13-billion parameter model on consumer hardware (8GB VRAM).
+*   **Precision Text Synthesis**: Integrated word segmentation post-processing to ensure human-grade readability and fix fine-tuning artifacts.
 
-### 🔹 Premium Interface (Design System: Electric Azure)
-*   **Liquid Glass Aesthetics**: High-fidelity glassmorphism with `backdrop-filter` depth and animated ambient lighting.
-*   **Dynamic Diagnostics**: Real-time hardware telemetry including dedicated GPU identification and precise VRAM utilization monitoring.
-*   **Responsive Control**: One-click "Engine Ignition" for asynchronous model loading/unloading with persistent state management.
+### Premium Interface (Electric Azure)
+*   **Liquid Glass Aesthetics**: High-fidelity glassmorphism with dynamic depth and animated ambient lighting.
+*   **Hardware Telemetry**: Real-time diagnostics for VRAM utilization and dedicated GPU identification.
+*   **Asynchronous Management**: Independent model loading/unloading with persistent state feedback.
 
 ---
 
-## 🏗️ Technical Workflow
+## Technical Workflow
 
 ```mermaid
 graph TD
@@ -47,48 +48,49 @@ graph TD
 
 ---
 
-## 📊 System Configuration
+## Deployment & Usage
+
+### ⚙️ System Requirements
+*   **GPU**: NVIDIA RTX (Minimum 8GB Dedicated VRAM)
+*   **RAM**: 16GB System Memory
+*   **Setup**: `pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate wordsegment`
+
+### 🖥️ Running the Application
+
+**Option 1: Premium Web Interface (Recommended)**
+```bash
+python gui/app.py
+# Access via http://localhost:5000
+```
+
+**Option 2: Terminal / CLI Mode**
+```bash
+python chat_llm.py
+# Interactive session within the console
+```
+
+---
+
+## System Configuration
 
 | Parameter | Specification |
 | :--- | :--- |
 | **Compute Architecture** | NVIDIA H100 80GB HBM3 |
 | **Quantization** | 4-Bit NF4 + Double Quantization |
-| **LoRA Parameters** | Rank: 32 / Alpha: 64 / Targets: All Linear Layers |
 | **Attention Mechanism** | Flash Attention 2 (Training) / SDPA (Inference) |
 | **Optimization** | 8-bit AdamW / BFloat16 Training Precision |
-| **Dataset Scale** | 1,000,000 Educational Samples (Streaming) |
+| **Dataset Scale** | 1,000,000 Educational Samples |
 
 ---
 
-## 🛠️ Installation & Deployment
-
-### Hardware Requirements
-*   **GPU**: NVIDIA RTX Series (Minimum 8GB Dedicated VRAM)
-*   **RAM**: 16GB System Memory (Minimum)
-*   **Storage**: 15GB SSD Space
-
-### Local Deployment
-```bash
-# 1. Environment Setup
-pip install torch transformers datasets faiss-cpu sentence-transformers peft bitsandbytes accelerate wordsegment
-
-# 2. Launch Interface
-python gui/app.py
-
-# 3. Access
-# Open http://localhost:5000 in any modern browser
-```
-
----
-
-## 📂 Project Governance
-*   **`gui/`**: Full-stack web application implementing the Electric Azure design system.
-*   **`chat_llm.py`**: Core inference engine and RAG orchestration logic.
-*   **`build_rag_index.py`**: High-performance vector index constructor for local knowledge bases.
-*   **`train.ipynb`**: Cloud-scale training pipeline optimized for H100 acceleration.
+## Repository Structure
+*   **`gui/`**: Dashboard frontend and Flask backend logic.
+*   **`chat_llm.py`**: Core inference engine and RAG pipeline.
+*   **`build_rag_index.py`**: Vector index constructor for local storage.
+*   **`train.ipynb`**: H100-optimized training pipeline.
 
 ---
 
 <div align="center">
-  <sub>Developed for privacy-conscious intelligence. InfoSage is license-free for personal use under the MIT framework.</sub>
+  <sub>Developed for privacy-conscious intelligence. InfoSage is licensed under the MIT framework.</sub>
 </div>
