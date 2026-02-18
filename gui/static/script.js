@@ -4,14 +4,14 @@ window.onerror = function (msg, url, line, col, error) {
     return false;
 };
 
-// ─── State ───
+// State
 let currentChatId = null;
 let messages = [];
 let isGenerating = false;
 let statusPollTimer = null;
 let currentModelStatus = 'stopped';
 
-// ─── DOM Elements ───
+// DOM Elements
 const els = {
     messages: document.getElementById('messages'),
     input: document.getElementById('input'),
@@ -30,7 +30,7 @@ const els = {
     themeIcon: document.getElementById('theme-icon')
 };
 
-// ─── Initialization ───
+// Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     checkModelStatus();
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listener
     els.modelBtn.addEventListener('click', toggleModel);
 
-    // ─── Ambient System ───
+    // Ambient System
     document.addEventListener('mousemove', (e) => {
         const x = e.clientX;
         const y = e.clientY;
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ─── Theme System ───
+// Theme System
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -95,7 +95,7 @@ function updateThemeIcon(theme) {
     if (window.lucide) lucide.createIcons();
 }
 
-// ─── Model Logic ───
+// Model Logic
 async function checkModelStatus() {
     try {
         const res = await fetch('/api/model/status');
@@ -170,7 +170,7 @@ async function toggleModel() {
     setTimeout(checkModelStatus, 1000);
 }
 
-// ─── Chat Logic ───
+// Chat Logic
 async function sendMessage() {
     const text = els.input.value.trim();
     if (!text || isGenerating) return;
@@ -210,7 +210,7 @@ async function sendMessage() {
             messages.push({ role: 'bot', content: data.response, source: data.source });
         }
 
-        // Update title
+        // Updating title
         if (messages.length === 2) {
             const title = text.slice(0, 40) + (text.length > 40 ? '...' : '');
             els.chatTitle.textContent = title;
@@ -252,7 +252,7 @@ function renderMessage(role, content, source) {
         html += `</div>`;
     }
 
-    html += `</div>`; // Close content
+    html += `</div>`;
 
     div.innerHTML = html;
     els.messages.appendChild(div);
@@ -281,7 +281,7 @@ function removeTyping(id) {
     if (el) el.remove();
 }
 
-// ─── Chat History ───
+// Chat History Sync
 async function saveChat() {
     if (!currentChatId) return;
     await fetch('/api/history', {
@@ -339,7 +339,7 @@ async function deleteCurrentChat() {
     newChat();
 }
 
-// ─── Utilities ───
+// Utilities
 function handleKey(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();

@@ -205,7 +205,7 @@ def unload_model():
     chat_llm.local_rag_available = False
     chat_llm.live_search_available = False
 
-    # Force garbage collection to release Python objects
+    # Forcing garbage collection to release Python objects
     gc.collect()
     
     # Empty CUDA cache to release VRAM
@@ -218,7 +218,7 @@ def unload_model():
     print("Model unloaded, VRAM freed.")
 
 
-# ─── Routes ──────────────────────────────────────────────
+# Routes
 
 @app.route("/")
 def index():
